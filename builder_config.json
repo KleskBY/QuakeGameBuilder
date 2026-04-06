@@ -1,0 +1,60 @@
+{
+    "fs_basepath": "C:\\Users\\user\\Desktop\\Invaders",
+    "fs_game": "standard",
+    "qc_dir": "standard\\qc",
+    "output_path": "",
+    "build_naming": "numeric",
+    "includes": [
+        "cubemaps",
+        "env",
+        "gfx",
+        "glsl",
+        "maps",
+        "particles",
+        "progs",
+        "scripts",
+        "../bin64",
+        "../qc",
+        "../licenses",
+        "autoexec.cfg",
+        "default.cfg",
+        "alias.cfg",
+        "joystick.cfg",
+        "csprogs.dat",
+        "menu.dat",
+        "progs.dat",
+        "effectinfo.txt",
+        "demo1.dem",
+        "textures/M_internals.png",
+        "textures/M_springs.png",
+        "sound/misc/menu1.wav",
+        "sound/misc/menu2.wav",
+        "sound/story/typewriter1.wav",
+        "sound/story/typewriter2.wav",
+        "sound/story/typewriter3.wav",
+        "sound/story/typewriter4.wav",
+        "sound/cdtracks",
+        "../objectn.exe",
+        "../ObjectN",
+        "../darkplaces-sdl",
+        "../credits.txt",
+        "../steam_api64.dll",
+        "../steam_appid.txt"
+    ],
+    "remove_paths": [
+        "gfx/ui",
+        "maps/test.bsp",
+        "config.cfg",
+        "particles/particlefont-template.png",
+        "dlcache",
+        "../zircon_history.txt"
+    ],
+    "pk3_packs": [
+        {
+            "name": "textures.pk3",
+            "paths": [
+                "textures"
+            ]
+        }
+    ]
+}
