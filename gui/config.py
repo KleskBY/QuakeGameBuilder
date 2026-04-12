@@ -30,7 +30,8 @@ DEFAULT_CONFIG = {
         "../zircon_history.txt",
         "../darkplaces_history.txt"
     ],
-    "pk3_packs": []
+    "pk3_packs": [],
+    "open_after_build": True
 }
 APP_STATE_FILE = "app_state.json"
 

@@ -9,8 +9,6 @@ pyinstaller --noconfirm --onefile --windowed --name "QuakeGameBuilder" --icon "f
 echo.
 if exist "dist\QuakeGameBuilder.exe" (
     echo SUCCESS: Executable created at dist\QuakeGameBuilder.exe
-    copy dist\QuakeGameBuilder.exe .
-    echo Copied to current directory.
 ) else (
     echo FAILURE: Build failed.
 )

@@ -4,6 +4,7 @@
     "qc_dir": "standard\\qc",
     "output_path": "",
     "build_naming": "numeric",
+    "open_after_build": true,
     "includes": [
         "cubemaps",
         "env",
@@ -18,28 +19,27 @@
         "../licenses",
         "autoexec.cfg",
         "default.cfg",
-        "alias.cfg",
-        "joystick.cfg",
         "csprogs.dat",
         "menu.dat",
         "progs.dat",
-        "effectinfo.txt",
-        "demo1.dem",
-        "textures/M_internals.png",
-        "textures/M_springs.png",
-        "sound/misc/menu1.wav",
-        "sound/misc/menu2.wav",
-        "sound/story/typewriter1.wav",
-        "sound/story/typewriter2.wav",
-        "sound/story/typewriter3.wav",
-        "sound/story/typewriter4.wav",
         "sound/cdtracks",
-        "../objectn.exe",
-        "../ObjectN",
-        "../darkplaces-sdl",
-        "../credits.txt",
-        "../steam_api64.dll",
-        "../steam_appid.txt"
+        "../Invaders.exe",
+        "invaders_map.pk3",
+        "data_000_progs_and_default_cfg.pk3",
+        "pak0.pak",
+        "fonts/Anton-Regular.ttf",
+        "fonts/Audiowide-Regular.ttf",
+        "fonts/NotoSerif-Regular.ttf",
+        "fonts/Roboto-Medium.ttf",
+        "fonts/func_text",
+        "menu_gfx/cursor_01.png",
+        "menu_gfx/cursor_02.png",
+        "menu_gfx/cursor_03.png",
+        "menu_gfx/cursor_04.png",
+        "menu_gfx/cursor_05.png",
+        "menu_gfx/cursor_06.png",
+        "menu_gfx/cursor_07.png",
+        "menu_gfx/cursor_08.png"
     ],
     "remove_paths": [
         "gfx/ui",
@@ -49,12 +49,5 @@
         "dlcache",
         "../zircon_history.txt"
     ],
-    "pk3_packs": [
-        {
-            "name": "textures.pk3",
-            "paths": [
-                "textures"
-            ]
-        }
-    ]
+    "pk3_packs": []
 }

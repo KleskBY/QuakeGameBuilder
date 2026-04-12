@@ -8,7 +8,7 @@ A build tool for creating clean, standalone releases of games built on the **Dar
 - **BSP Map Scanning** -- Parses Quake 3 BSP files (IBSP v46) to extract entity references and texture names from lump data
 - **MD3 Model Scanning** -- Reads binary MD3 model files for embedded texture paths, plus associated `.skin` files
 - **Shader Resolution** -- Parses `.shader` files and resolves shader names to their actual texture dependencies (supports `map`, `animMap`, `clampMap`, `qer_editorimage`, and more)
-- **PBR Texture Variants** -- Automatically copies `_norm`, `_gloss`, and `_glow` variants alongside base textures
+- **Texture Variants** -- Automatically copies `_norm`, `_gloss`, and `_glow` variants alongside base textures
 - **Configurable Includes/Excludes** -- Specify directories, files, and executables to always include, and paths to strip from the final build
 - **Dated Builds** -- Generates uniquely named build directories (`build20260328`, `build20260328_1`, etc.)
 - **PyQt6 GUI** -- Tabbed interface for scanning, reviewing resource trees, adding manual entries, and viewing build logs
@@ -19,8 +19,6 @@ A build tool for creating clean, standalone releases of games built on the **Dar
 - Python 3.8+
 - PyQt6 (for the GUI)
 
-The scanner and builder core (`scanner.py`, `builder.py`) use only the Python standard library.
-
 ## Quick Start
 
 ```bash
@@ -30,10 +28,6 @@ cd QuakeGameBuilder
 
 # Install GUI dependency
 pip install PyQt6
-
-# Edit configuration to point to your game
-# (see Configuration section below)
-notepad builder_config.json
 
 # Launch the GUI
 python run_gui.py
@@ -70,7 +64,7 @@ All settings are stored in `builder_config.json`:
 | `fs_basepath` | Absolute path to your game's root directory |
 | `fs_game` | Name of the game data subdirectory (typically `data` or `id1`) |
 | `includes` | Files and directories to always copy into the build. Paths are relative to the data directory; use `../` prefix for files outside it (executables, licenses, etc.) |
-| `remove_paths` | Paths to remove from the build after copying (test maps, dev configs, template files). Relative to the data directory, same as `includes`; use `../` for files outside it |
+| `remove_paths` | Paths to remove from the build after copying (test maps, dev configs, template files). Relative to the data directory. |
 
 Settings can also be edited from the GUI's **Settings** tab.
 
@@ -133,7 +127,7 @@ This installs PyInstaller and PyQt6 if needed, then produces a standalone execut
 1. Create dated build directory (e.g., build20260328/)
 2. Copy all "includes" (configured dirs, executables, configs)
 3. Copy scanned assets + manual additions into build/data/
-4. For each texture, also copy _norm, _gloss, _glow PBR variants if they exist
+4. For each texture, also copy _norm, _gloss, _glow variants if they exist
 5. Remove configured exclude paths (test maps, dev files)
 6. Write version.txt with build metadata
 ```

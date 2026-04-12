@@ -3,7 +3,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (QWidget, QFormLayout, QLineEdit, QPushButton,
                              QHBoxLayout, QFileDialog, QTabWidget, QVBoxLayout,
                              QPlainTextEdit, QLabel, QMessageBox, QComboBox,
-                             QGroupBox, QScrollArea)
+                             QGroupBox, QScrollArea, QCheckBox)
 
 class SettingsTab(QWidget):
     project_changed = pyqtSignal()
@@ -79,15 +79,18 @@ class SettingsTab(QWidget):
         btn_browse_output.setFixedWidth(30)
         btn_browse_output.clicked.connect(self.browse_output_path)
 
+        self.combo_naming = QComboBox()
+        self.combo_naming.addItem("Date (build20260328)", "date")
+        self.combo_naming.addItem("Numeric (build9623)", "numeric")
+        layout_gen.addRow("Build Naming:", self.combo_naming)
+
         row_output = QHBoxLayout()
         row_output.addWidget(self.edit_output_path)
         row_output.addWidget(btn_browse_output)
         layout_gen.addRow("Output Path:", row_output)
 
-        self.combo_naming = QComboBox()
-        self.combo_naming.addItem("Date (build20260328)", "date")
-        self.combo_naming.addItem("Numeric (build9623)", "numeric")
-        layout_gen.addRow("Build Naming:", self.combo_naming)
+        self.chk_open_after_build = QCheckBox("")
+        layout_gen.addRow("Open location after build:", self.chk_open_after_build)
 
         self.tabs.addTab(tab_general, "General")
 
@@ -220,6 +223,8 @@ class SettingsTab(QWidget):
         idx = self.combo_naming.findData(naming)
         self.combo_naming.setCurrentIndex(idx if idx >= 0 else 0)
 
+        self.chk_open_after_build.setChecked(config.get("open_after_build", True))
+
         includes = config.get("includes", [])
         self.edit_includes.setPlainText("\n".join(includes))
 
@@ -241,6 +246,7 @@ class SettingsTab(QWidget):
             "qc_dir": self.edit_qc_dir.text(),
             "output_path": self.edit_output_path.text(),
             "build_naming": self.combo_naming.currentData(),
+            "open_after_build": self.chk_open_after_build.isChecked(),
             "includes": self.get_list_from_editor(self.edit_includes),
             "remove_paths": self.get_list_from_editor(self.edit_rem_paths),
             "pk3_packs": self._get_pk3_packs()

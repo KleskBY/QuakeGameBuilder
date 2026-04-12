@@ -2,8 +2,8 @@ import os
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QTabWidget,
                              QLabel, QMessageBox, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QAction, QDesktopServices
 from .config import ConfigManager
 from .workers import ScanWorker, BuildWorker
 from .tabs.analyzer import SourceAnalyzerTab
@@ -171,10 +171,12 @@ class MainWindow(QMainWindow):
         
     def on_build_finished(self, build_name):
         self.build_action.setEnabled(True)
-        # self.btn_build.setEnabled(True)
         if build_name:
             self.status.setText(f"Build Success: {build_name}")
             self.tab_log.append(f"\nSUCCESS: Build saved to {build_name}")
+            if self.config_manager.get("open_after_build", True):
+                abs_path = os.path.abspath(build_name)
+                QDesktopServices.openUrl(QUrl.fromLocalFile(abs_path))
         else:
             self.status.setText("Build Failed")
 

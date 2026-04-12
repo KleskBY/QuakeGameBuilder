@@ -6,6 +6,29 @@ import struct
 QC_DIR = "../qc"
 BSP_DIR = "../data/maps"
 
+IMAGE_EXTENSIONS = [".png", ".tga", ".jpg", ".jpeg", ".webp"]
+
+def resolve_image_extension(rel_path, data_dir):
+    """
+    For image resource paths: if the file doesn't exist with its current extension,
+    try the other known image extensions and return the first one found on disk.
+    Non-image paths are returned unchanged.
+    """
+    ext = os.path.splitext(rel_path)[1].lower()
+    if ext not in IMAGE_EXTENSIONS:
+        return rel_path
+    if os.path.isfile(os.path.join(data_dir, rel_path)):
+        return rel_path
+    base = os.path.splitext(rel_path)[0]
+    for alt in IMAGE_EXTENSIONS:
+        if alt == ext:
+            continue
+        candidate = base + alt
+        if os.path.isfile(os.path.join(data_dir, candidate)):
+            return candidate
+    return rel_path  # not found with any extension, keep original
+
+
 def is_valid_resource(path, extensions):
     """Checks if a path has one of the valid extensions and reasonable length."""
     path = path.strip().lower()
@@ -34,20 +57,61 @@ def is_valid_texture_path(path):
 
 # --- QC Scanning Logic ---
 
-def extract_from_qc_content(content):
-    """Extracts .wav, .md3, .iqm, .obj, .mdl, .spr32 references from QC text content."""
-    resources = set()
+def _strip_qc_inactive_code(content):
+    """
+    Remove inactive code from QC source before scanning for resource references.
+    Handles in order:
+      1. Block comments  /* ... */   (multiline, newlines preserved)
+      2. #if 0 ... #endif blocks     (with correct nesting; #else re-activates)
+      3. Line comments   // ...
+    """
+    # 1. Block comments — replace with equivalent newlines to keep line numbers intact
+    content = re.sub(
+        r'/\*.*?\*/',
+        lambda m: '\n' * m.group().count('\n'),
+        content,
+        flags=re.DOTALL
+    )
 
-    # Strip // line comments before scanning so commented-out references are ignored.
-    # QC resource paths never contain "://" so this is safe.
-    stripped_lines = []
+    # 2. #if 0 blocks with nesting
+    lines = content.split('\n')
+    out = []
+    skip_depth = 0
+    for line in lines:
+        s = line.strip()
+        if skip_depth > 0:
+            if re.match(r'#\s*if\b', s):           # nested #if inside skipped block
+                skip_depth += 1
+            elif re.match(r'#\s*endif\b', s):
+                skip_depth -= 1
+            elif skip_depth == 1 and re.match(r'#\s*else\b', s):
+                skip_depth = 0                       # #else of the #if 0 is live code
+            out.append('')                           # blank the skipped line
+        else:
+            if re.match(r'#\s*if\s+0\b', s):
+                skip_depth = 1
+                out.append('')
+            else:
+                out.append(line)
+    content = '\n'.join(out)
+
+    # 3. Line comments — strip from // to end of line
+    # QC resource paths never contain "://" so this is safe
+    result = []
     for line in content.split('\n'):
         idx = line.find('//')
-        stripped_lines.append(line[:idx] if idx >= 0 else line)
-    content = '\n'.join(stripped_lines)
+        result.append(line[:idx] if idx >= 0 else line)
+    return '\n'.join(result)
 
-    # Simple regex for quoted strings looking like resources
-    # This matches "sound/path/file.wav" or "models/path/file.md3"
+
+def extract_from_qc_content(content):
+    """Extracts resource references from QC text content."""
+    resources = set()
+
+    content = _strip_qc_inactive_code(content)
+
+    # --- Explicitly-extensioned resources ---
+    # Match any quoted path ending with a known extension.
     patterns = [
         r'"([a-zA-Z0-9_\-\/]+\.wav)"',
         r'"([a-zA-Z0-9_\-\/]+\.md3)"',
@@ -55,15 +119,36 @@ def extract_from_qc_content(content):
         r'"([a-zA-Z0-9_\-\/]+\.obj)"',
         r'"([a-zA-Z0-9_\-\/]+\.mdl)"',
         r'"([a-zA-Z0-9_\-\/]+\.spr)"',
-        r'"([a-zA-Z0-9_\-\/]+\.spr32)"'
+        r'"([a-zA-Z0-9_\-\/]+\.spr32)"',
+        # UI / HUD images referenced with explicit extension
+        r'"([a-zA-Z0-9_\-\/]+\.png)"',
+        r'"([a-zA-Z0-9_\-\/]+\.jpg)"',
+        r'"([a-zA-Z0-9_\-\/]+\.jpeg)"',
+        r'"([a-zA-Z0-9_\-\/]+\.tga)"',
+        r'"([a-zA-Z0-9_\-\/]+\.webp)"',
+        # Fonts
+        r'"([a-zA-Z0-9_\-\/]+\.ttf)"',
+        r'"([a-zA-Z0-9_\-\/]+\.otf)"',
     ]
     for p in patterns:
-        matches = re.findall(p, content)
-        for m in matches:
-            # Fix sound paths: logic often omits "sound/" prefix for precache_sound etc.
+        for m in re.findall(p, content):
             if m.endswith(".wav") and not m.startswith("sound/"):
                 m = "sound/" + m
             resources.add(m)
+
+    # --- Extensionless image paths from UI draw calls ---
+    # drawpic / drawsubpic / precache_pic often pass paths without an extension;
+    # the engine tries .tga, .png, .jpg in order. We record these as .png so the
+    # builder knows at least one variant is needed (PBR logic handles the rest).
+    # Require at least one '/' so bare strings like cvar names ("zr_hotbar") are ignored.
+    # Real image paths always have a directory component (e.g. "gfx/hud/health").
+    ui_funcs = r'(?:drawpic|drawsubpic|precache_pic)\s*\([^)]*"([a-zA-Z0-9_\-\/]+\/[a-zA-Z0-9_\-\/]+)"'
+    for m in re.findall(ui_funcs, content, re.IGNORECASE):
+        # Skip if it already has a known extension (caught above)
+        if not re.search(r'\.(wav|md3|iqm|obj|mdl|spr32?|png|jpe?g|tga|webp)$', m, re.IGNORECASE):
+            resources.add(m + ".png")
+ 
+
     return list(resources)
 
 def scan_qc_files(qc_dir=QC_DIR):
@@ -209,28 +294,93 @@ def scan_bsp_files(bsp_dir=BSP_DIR):
 # --- MD3 Scanning Logic ---
 
 def extract_from_md3(path):
-    """Extracts texture references from an MD3 file."""
+    """Extracts shader/texture references from an MD3 file.
+
+    Uses proper structural parsing (surface → shader NAME fields) as the primary
+    method, with a textures/-anchored regex fallback for any paths the parser misses.
+    """
     textures = set()
+
+    def _add(name):
+        name = re.sub(r'\.(tga|jpg|jpeg|png|bmp|webp)$', '', name, flags=re.IGNORECASE)
+        if name and not should_ignore(name) and is_valid_texture_path(name):
+            textures.add(name + ".png")
+
     try:
         with open(path, "rb") as f:
             data = f.read()
-            # Look for strings starting with textures/
-            # MD3 usually stores them as null-padded strings, but regex works fine on binary
-            matches = re.findall(rb'textures\/[^\x00\s]{1,100}', data)
-            for m in matches:
+
+        # --- Structural parsing ---
+        # Header layout (all S32 little-endian):
+        #   0  IDENT "IDP3"
+        #   4  VERSION
+        #   8  NAME[64]
+        #  72  FLAGS
+        #  76  NUM_FRAMES
+        #  80  NUM_TAGS
+        #  84  NUM_SURFACES
+        #  88  NUM_SKINS
+        #  92  OFS_FRAMES
+        #  96  OFS_TAGS
+        # 100  OFS_SURFACES
+        # 104  OFS_EOF
+        if len(data) >= 108 and data[:4] == b'IDP3':
+            try:
+                num_surfaces = struct.unpack_from('<i', data, 84)[0]
+                ofs_surfaces = struct.unpack_from('<i', data, 100)[0]
+
+                surface_base = ofs_surfaces
+                for _ in range(num_surfaces):
+                    if surface_base + 108 > len(data):
+                        break
+
+                    # Surface header layout:
+                    #   0  IDENT
+                    #   4  NAME[64]
+                    #  68  FLAGS
+                    #  72  NUM_FRAMES
+                    #  76  NUM_SHADERS
+                    #  80  NUM_VERTS
+                    #  84  NUM_TRIANGLES
+                    #  88  OFS_TRIANGLES
+                    #  92  OFS_SHADERS
+                    #  96  OFS_ST
+                    # 100  OFS_XYZNORMAL
+                    # 104  OFS_END
+                    num_shaders = struct.unpack_from('<i', data, surface_base + 76)[0]
+                    ofs_shaders = struct.unpack_from('<i', data, surface_base + 92)[0]
+                    ofs_end     = struct.unpack_from('<i', data, surface_base + 104)[0]
+
+                    # Each Shader entry: NAME[64] + SHADER_INDEX(4) = 68 bytes
+                    shader_base = surface_base + ofs_shaders
+                    for j in range(num_shaders):
+                        off = shader_base + j * 68
+                        if off + 64 > len(data):
+                            break
+                        name = data[off:off + 64].split(b'\x00', 1)[0].decode('utf-8', errors='ignore')
+                        _add(name)
+
+                    if ofs_end <= 0:
+                        break
+                    surface_base += ofs_end
+            except Exception:
+                pass
+
+        # --- Regex fallback ---
+        # Catches any paths the structural parser missed (e.g. malformed surfaces).
+        # Anchored to textures/ to avoid garbage from binary data; captures full
+        # path (e.g. models/foo/textures/bar) by scanning token-by-token.
+        candidates = re.findall(rb'[a-zA-Z0-9_.+\-*#/]{4,256}', data)
+        for c in candidates:
+            if b'textures/' in c:
                 try:
-                    # Clean up and normalize
-                    s = m.decode('utf-8', errors='ignore')
-                    # Strip existing extensions if any (MD3s often have them, or not)
-                    s = re.sub(r'\.(tga|jpg|jpeg|png|bmp)$', '', s, flags=re.IGNORECASE)
-                    
-                    if not should_ignore(s) and is_valid_texture_path(s):
-                         # Assume .png as per other tools
-                        textures.add(s + ".png")
+                    _add(c.decode('utf-8', errors='ignore'))
                 except Exception:
                     pass
+
     except Exception as e:
         print(f"Error scanning MD3 {path}: {e}")
+
     return list(textures)
 
 def extract_from_skin(path):
@@ -318,10 +468,10 @@ def extract_from_obj(path):
                     mtl_name = line.split(None, 1)[1].strip()
                     mtl_path = os.path.join(obj_dir, mtl_name)
                     # Add the .mtl file itself as a dependency
-                    textures.add(mtl_name)
+                    # textures.add(mtl_name)
                     # Parse the .mtl file for texture maps
-                    mtl_textures = _parse_mtl_file(mtl_path, obj_dir)
-                    textures.update(mtl_textures)
+                    # mtl_textures = _parse_mtl_file(mtl_path, obj_dir)
+                    # textures.update(mtl_textures)
     except Exception as e:
         print(f"Error scanning OBJ {path}: {e}")
     return list(textures)
@@ -634,7 +784,17 @@ def scan_all(qc_dir=QC_DIR, bsp_dir=BSP_DIR, scripts_dir=None):
 
     model_results = scan_model_files(found_models, data_dir)
     all_results.update(model_results)
-    
+
+    # --- Resolve image extensions against disk ---
+    # For any image resource, if the recorded extension doesn't exist on disk,
+    # substitute the first matching alternative (.png -> .tga -> .jpg -> etc.)
+    print("Resolving image extensions...")
+    resolved_results = {}
+    for src, resources in all_results.items():
+        resolved = [resolve_image_extension(r, data_dir) for r in resources]
+        resolved_results[src] = resolved
+    all_results = resolved_results
+
     return all_results
 
 if __name__ == "__main__":
