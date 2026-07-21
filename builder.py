@@ -45,9 +45,10 @@ def sha256_file(path):
 
 
 def git_commit(path):
+    root = Path(path).resolve()
     try:
         result = subprocess.run(
-            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            ["git", "-c", f"safe.directory={root}", "-C", str(root), "rev-parse", "HEAD"],
             check=True,
             capture_output=True,
             text=True,
