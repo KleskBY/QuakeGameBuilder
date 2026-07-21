@@ -31,6 +31,7 @@ DEFAULT_CONFIG = {
         "../darkplaces_history.txt"
     ],
     "pk3_packs": [],
+    "ignore_patterns": [],
     "open_after_build": True
 }
 APP_STATE_FILE = "app_state.json"

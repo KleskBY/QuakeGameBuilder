@@ -1,6 +1,7 @@
 import os
 import re
 import struct
+import zipfile
 
 # Configuration Defaults (can be overridden)
 QC_DIR = "../qc"
@@ -383,6 +384,38 @@ def extract_from_md3(path):
 
     return list(textures)
 
+def extract_from_events(path):
+    """Extracts .wav sound references from an IQM .events sidecar.
+
+    Format (whitespace-separated): <group> <time> <eventcode> <opts>
+    The <opts> field holds a .wav path for sound events (e.g. an HL SCRIPT_EVENT
+    footstep), or a number / "-" for non-sound events. We only harvest tokens
+    ending in .wav. Sound paths in .events are stored WITHOUT the sound/ prefix
+    (the engine plays them via the sound() builtin, which is rooted at sound/),
+    so we normalize to "sound/..." to match how QC/BSP .wav refs are recorded.
+    """
+    sounds = set()
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("//"):
+                    continue
+                for tok in line.split():
+                    t = tok.strip().lower()
+                    # HL prefixes streamed/looping sounds with '*' (a precache
+                    # sentinel the engine strips, not part of the filename).
+                    t = t.lstrip("*")
+                    if t.endswith(".wav") and len(t) > 4:
+                        if not t.startswith("sound/"):
+                            t = "sound/" + t
+                        if is_valid_texture_path(t):
+                            sounds.add(t)
+    except Exception as e:
+        print(f"Error scanning events {path}: {e}")
+    return list(sounds)
+
+
 def extract_from_skin(path):
     """Extracts texture references from a .skin file (mesh,texture)."""
     textures = set()
@@ -583,11 +616,21 @@ def scan_model_files(model_paths, data_root):
                         skin_textures = extract_from_skin(skin_full_path)
                         resources.update(skin_textures)
 
-            # IQM: auto-import adjacent .framegroups
+            # IQM: auto-import adjacent runtime sidecars. These are loaded by QC
+            # via fopen (.framegroups/.events -> util_framegroups.qc,
+            # .bodyinfo -> util_body.qc) and are NOT referenced by name anywhere
+            # in the QC/BSP source, so the scanner is the only thing that can
+            # discover them for the build. Missing them at runtime silently
+            # breaks animation events and the bodygroup/skin-family system.
             if ext == ".iqm":
-                fg_path = full_path + ".framegroups"
-                if os.path.isfile(fg_path):
-                    resources.add(os.path.relpath(fg_path, data_root).replace("\\", "/"))
+                for sidecar_ext in (".framegroups", ".events", ".bodyinfo"):
+                    sc_path = full_path + sidecar_ext
+                    if os.path.isfile(sc_path):
+                        resources.add(os.path.relpath(sc_path, data_root).replace("\\", "/"))
+                        # .events references .wav sounds that appear nowhere else
+                        # in QC — harvest them so the build tracks/verifies them.
+                        if sidecar_ext == ".events":
+                            resources.update(extract_from_events(sc_path))
 
         if resources:
             results[full_path] = list(resources)
@@ -737,6 +780,45 @@ def load_all_shaders(data_dir):
                     print(f"Error parsing shader {file}: {e}")
                     
     return shader_map
+
+# --- Archive (PK3) Indexing ---
+
+def index_pk3_archives(data_root):
+    """
+    Index the contents of every .pk3 archive under data_root.
+
+    .pk3 is a plain zip (id Tech 3 convention); the engine mounts these at
+    runtime, so an asset can legitimately be "present" without existing as a
+    loose file on disk. Returns a lookup so the resource-tree UI can distinguish
+    "packed in an archive" from genuinely "missing".
+
+    Returns: dict { "maps/c1a0.bsp": "halflife_maps.pk3", ... }
+             keys are lower-cased, forward-slash relative paths (resource paths
+             are already stored lower/-slash elsewhere in the scanner); the
+             value is the archive's basename for display.
+    """
+    index = {}
+    if not data_root or not os.path.isdir(data_root):
+        return index
+
+    for root, _, files in os.walk(data_root):
+        for file in files:
+            if not file.lower().endswith(".pk3"):
+                continue
+            pk3_path = os.path.join(root, file)
+            try:
+                with zipfile.ZipFile(pk3_path, "r") as zf:
+                    for name in zf.namelist():
+                        if name.endswith("/"):
+                            continue  # directory entry, not a file
+                        key = name.replace("\\", "/").lower()
+                        # First archive wins (mirrors typical mount order well
+                        # enough for a "does it exist anywhere" check).
+                        index.setdefault(key, file)
+            except Exception as e:
+                print(f"Error reading PK3 {pk3_path}: {e}")
+
+    return index
 
 # --- Main Scanner Entry Point ---
 

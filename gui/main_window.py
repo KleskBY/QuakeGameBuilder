@@ -1,4 +1,5 @@
 import os
+import scanner
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QTabWidget,
                              QLabel, QMessageBox, QDialog, QDialogButtonBox)
@@ -82,6 +83,7 @@ class MainWindow(QMainWindow):
 
         # Tab 3: Resource Tree
         self.tab_res_tree = ResourceTreeTab()
+        self.tab_res_tree.ignore_pattern_added.connect(self.on_pattern_marked_external)
         self.tabs.addTab(self.tab_res_tree, "Resource Tree")
 
         # Tab 4: Build Log
@@ -133,8 +135,16 @@ class MainWindow(QMainWindow):
         config = self.config_manager.get_all()
         data_root = os.path.join(config["fs_basepath"], config["fs_game"])
 
+        # Index .pk3 archives so assets packed inside them aren't flagged MISSING.
+        archive_index = scanner.index_pk3_archives(data_root)
+        self._last_archive_index = archive_index
+        self._last_data_root = data_root
+
         self.tab_analyzer.update_data(results)
-        self.tab_res_tree.update_data(results, data_root=data_root)
+        self.tab_res_tree.update_data(
+            results, data_root=data_root,
+            archive_index=archive_index,
+            ignore_patterns=config.get("ignore_patterns", []))
 
         missing = len(self.tab_res_tree.missing_files)
         total = sum(len(r) for r in results.values())
@@ -144,6 +154,19 @@ class MainWindow(QMainWindow):
         self.status.setText(status)
         # self.btn_scan.setEnabled(True)
         self.scan_action.setEnabled(True)
+
+    def on_pattern_marked_external(self, pattern):
+        """User right-clicked a MISSING resource and marked it external.
+        Adds the pattern to the ignore list and reclassifies in place — no
+        rescan needed. Persist happens on the next Save Settings."""
+        patterns = self.tab_settings.add_ignore_pattern(pattern)
+        self.config_manager.set("ignore_patterns", patterns)
+        data_root = getattr(self, "_last_data_root", "")
+        self.tab_res_tree.update_data(
+            self.scanned_data, data_root=data_root,
+            archive_index=getattr(self, "_last_archive_index", {}),
+            ignore_patterns=patterns)
+        self.status.setText(f"Marked '{pattern}' as external — click Save Settings to persist.")
 
     # --- Building ---
     def start_build(self):

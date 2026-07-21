@@ -123,6 +123,19 @@ class SettingsTab(QWidget):
         layout_exc.addWidget(self.edit_rem_paths)
         self.tabs.addTab(tab_excludes, "Excludes")
 
+        # --- Ignore / External Assets Tab ---
+        self.edit_ignore_patterns = self.create_list_editor("Ignore Patterns:")
+
+        tab_ignore = QWidget()
+        layout_ign = QVBoxLayout(tab_ignore)
+        layout_ign.addWidget(QLabel(
+            "External / stock assets to exclude from the MISSING check.\n"
+            "One glob pattern per line (e.g. sound/vox/*, maps/c2a2*.bsp).\n"
+            "These are original Q1/HL1 assets the mod doesn't bundle; the end "
+            "user supplies them."))
+        layout_ign.addWidget(self.edit_ignore_patterns)
+        self.tabs.addTab(tab_ignore, "Ignore")
+
         # --- PK3 Packs Tab ---
         tab_pk3 = QWidget()
         layout_pk3_outer = QVBoxLayout(tab_pk3)
@@ -231,6 +244,9 @@ class SettingsTab(QWidget):
         removes = config.get("remove_paths", [])
         self.edit_rem_paths.setPlainText("\n".join(removes))
 
+        ignores = config.get("ignore_patterns", [])
+        self.edit_ignore_patterns.setPlainText("\n".join(ignores))
+
         self._load_pk3_entries(config.get("pk3_packs", []))
 
         self._update_project_label()
@@ -249,6 +265,7 @@ class SettingsTab(QWidget):
             "open_after_build": self.chk_open_after_build.isChecked(),
             "includes": self.get_list_from_editor(self.edit_includes),
             "remove_paths": self.get_list_from_editor(self.edit_rem_paths),
+            "ignore_patterns": self.get_list_from_editor(self.edit_ignore_patterns),
             "pk3_packs": self._get_pk3_packs()
         }
 
@@ -299,6 +316,16 @@ class SettingsTab(QWidget):
     def get_list_from_editor(self, editor):
         text = editor.toPlainText()
         return [line.strip() for line in text.split('\n') if line.strip()]
+
+    def add_ignore_pattern(self, pattern):
+        """Append a pattern to the ignore-patterns editor (deduped).
+        Returns the updated list. Does NOT persist to disk — the user still
+        clicks Save Settings for that."""
+        patterns = self.get_list_from_editor(self.edit_ignore_patterns)
+        if pattern not in patterns:
+            patterns.append(pattern)
+            self.edit_ignore_patterns.setPlainText("\n".join(patterns))
+        return patterns
 
     # --- PK3 Packs ---
 
