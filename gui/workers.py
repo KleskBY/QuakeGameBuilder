@@ -46,6 +46,9 @@ class BuildWorker(QThread):
         self.fs_game = config["fs_game"]
         
     def run(self):
+        if self.config.get("build_mode") == "manifest":
+            self.error.emit("Manifest release builds must use quakebuild.py so they can be verified.")
+            return
         b = builder.Builder()
         b.log_callback = self.log_signal.emit
         b.set_paths(self.fs_basepath, self.fs_game)

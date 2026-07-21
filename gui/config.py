@@ -1,45 +1,15 @@
 import os
 import json
+from copy import deepcopy
 
-# Config Defaults
-DEFAULT_CONFIG = {
-    "fs_basepath": "",
-    "fs_game": "data",
-    "qc_dir": "qc",
-    "output_path": "",
-    "includes": [
-        "cubemaps",
-        "env",
-        "gfx",
-        "glsl",
-        "maps",
-        "particles",
-        "progs",
-        "scripts",
-        "autoexec.cfg",
-        "default.cfg",
-        "csprogs.dat",
-        "menu.dat",
-        "progs.dat",
-        "effectinfo.txt",
-        "demo1.dem"
-    ],
-    "remove_paths": [
-        "dlcache",
-        "config.cfg",
-        "../zircon_history.txt",
-        "../darkplaces_history.txt"
-    ],
-    "pk3_packs": [],
-    "ignore_patterns": [],
-    "open_after_build": True
-}
+from project_config import DEFAULT_CONFIG, load_project_config
+
 APP_STATE_FILE = "app_state.json"
 
 class ConfigManager:
     """Manages loading and saving of builder configuration."""
     def __init__(self):
-        self.config = DEFAULT_CONFIG.copy()
+        self.config = deepcopy(DEFAULT_CONFIG)
         self.config_file = None
         self._load_app_state()
 
@@ -70,11 +40,7 @@ class ConfigManager:
     def load_config(self, file_path):
         """Load config from a specific JSON file."""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                loaded = json.load(f)
-            # Merge with defaults so new keys are always present
-            self.config = DEFAULT_CONFIG.copy()
-            self.config.update(loaded)
+            self.config = load_project_config(file_path)
             self.config_file = os.path.abspath(file_path)
             self._save_app_state()
             return True
