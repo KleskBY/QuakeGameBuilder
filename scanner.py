@@ -544,8 +544,32 @@ def scan_model_files(model_paths, data_root):
                 abs_t = os.path.join(obj_dir, t) if not os.path.isabs(t) else t
                 rel_t = os.path.relpath(abs_t, data_root).replace("\\", "/")
                 resources.add(rel_t)
+        elif ext == ".mdl":
+            # MDL: auto-import retexture overrides (e.g. beam.mdl_0.png, beam.mdl_1.png)
+            model_dir = os.path.dirname(full_path)
+            model_filename = os.path.basename(full_path).lower()
+            if os.path.isdir(model_dir):
+                for f in os.listdir(model_dir):
+                    fl = f.lower()
+                    if fl.startswith(model_filename + "_") and fl.endswith(".png"):
+                        rel = os.path.relpath(os.path.join(model_dir, f), data_root).replace("\\", "/")
+                        resources.add(rel)
+                    elif fl.endswith(".skin"):
+                        skin_full_path = os.path.join(model_dir, f)
+                        skin_rel_path = os.path.relpath(skin_full_path, data_root).replace("\\", "/")
+                        resources.add(skin_rel_path)
+                        resources.update(extract_from_skin(skin_full_path))
         elif ext in extractors:
             textures = extractors[ext](full_path)
+
+            # Bodygroup-baked IQMs (mdl2iqm) store the mesh token itself in the
+            # material field (e.g. "b1s3_sci2_face") as a placeholder — the real
+            # texture (or common/nodraw) is resolved per-variant by the adjacent
+            # .skin files, not by this raw name. Reporting it as a needed texture
+            # is a false positive; skip when a .bodyinfo sidecar is present.
+            if ext == ".iqm" and os.path.isfile(full_path + ".bodyinfo"):
+                textures = set()
+
             resources.update(textures)
 
             # Look for adjacent .skin files (MD3/IQM/MDL)
@@ -558,6 +582,12 @@ def scan_model_files(model_paths, data_root):
                         resources.add(skin_rel_path)
                         skin_textures = extract_from_skin(skin_full_path)
                         resources.update(skin_textures)
+
+            # IQM: auto-import adjacent .framegroups
+            if ext == ".iqm":
+                fg_path = full_path + ".framegroups"
+                if os.path.isfile(fg_path):
+                    resources.add(os.path.relpath(fg_path, data_root).replace("\\", "/"))
 
         if resources:
             results[full_path] = list(resources)

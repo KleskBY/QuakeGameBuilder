@@ -188,3 +188,4 @@ build*/
 app_state.json
 *.exe
 *.dll
+*.zip
