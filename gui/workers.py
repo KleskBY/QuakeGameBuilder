@@ -55,6 +55,7 @@ class BuildWorker(QThread):
         b.output_path = self.config.get("output_path", "")
         b.build_naming = self.config.get("build_naming", "date")
         b.pk3_packs = self.config.get("pk3_packs", [])
+        b.ignore_patterns = self.config.get("ignore_patterns", [])
         b.set_config(
             self.config.get("includes", []),
             self.config.get("remove_paths", [])

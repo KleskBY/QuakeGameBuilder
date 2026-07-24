@@ -46,6 +46,7 @@ def _legacy_build(config):
     builder.output_path = config.get("output_path", "")
     builder.build_naming = config.get("build_naming", "date")
     builder.pk3_packs = config.get("pk3_packs", [])
+    builder.ignore_patterns = config.get("ignore_patterns", [])
     builder.set_config(config.get("includes", []), config.get("remove_paths", []))
     return builder.run_build(assets)
 

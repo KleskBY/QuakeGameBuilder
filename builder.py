@@ -134,6 +134,7 @@ class Builder:
         self.includes = []
         self.remove_paths = []
         self.pk3_packs = []
+        self.ignore_patterns = []
 
     def set_paths(self, fs_basepath, fs_game):
         self.fs_basepath = fs_basepath
@@ -181,7 +182,14 @@ class Builder:
                 destination = _require_within(release_data / item, staging, "Include destination")
                 _copy_tree_safe(source, destination, project_root, staging)
 
+            ignore_patterns = self.ignore_patterns or []
             for relative in sorted(set(custom_assets or [])):
+                normalized = str(relative).replace("\\", "/").lstrip("./").lower()
+                if any(fnmatch.fnmatch(normalized, p.replace("\\", "/").lower()) for p in ignore_patterns):
+                    continue  # ignore-listed reference (engine-virtual, scanner false-positive, external asset)
+                if not (data_root / relative).is_file():
+                    self.warning(f"Skipping missing asset (not on disk): {relative}")
+                    continue
                 source = _require_regular_source(data_root / relative, data_root)
                 destination = _safe_destination(release_data, relative)
                 destination.parent.mkdir(parents=True, exist_ok=True)
