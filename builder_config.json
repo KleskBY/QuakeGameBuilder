@@ -43,7 +43,7 @@
         "textures/liquids_extracted",
         "data",
         "video",
-        "data/user.cfg"
+        "user.cfg"
     ],
     "remove_paths": [
         "data/gfx/ui",
