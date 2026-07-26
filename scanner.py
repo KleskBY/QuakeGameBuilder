@@ -2,6 +2,7 @@ import os
 import re
 import struct
 import zipfile
+import glob as _glob
 
 # Configuration Defaults (can be overridden)
 QC_DIR = "../qc"
@@ -822,10 +823,17 @@ def index_pk3_archives(data_root):
 
 # --- Main Scanner Entry Point ---
 
-def scan_all(qc_dir=QC_DIR, bsp_dir=BSP_DIR, scripts_dir=None):
+def scan_all(qc_dir=QC_DIR, bsp_dir=BSP_DIR, scripts_dir=None, extra_model_globs=None):
     """
     Runs all scanning logic.
     Returns a unified dictionary: { "SourceFile": ["Resource1", "Resource2"] }
+
+    extra_model_globs: list of glob patterns (relative to the data root) whose
+    on-disk matches are force-included as if referenced. Use for assets the QC
+    builds dynamically at runtime and the scanner therefore cannot follow --
+    e.g. func_breakable gib sets ("models/*gibs*.iqm"). Matched model files also
+    flow through the model dependency scan below, so their textures/skins get
+    bundled too.
     """
     all_results = {}
     
@@ -884,6 +892,23 @@ def scan_all(qc_dir=QC_DIR, bsp_dir=BSP_DIR, scripts_dir=None):
         # Update results
         all_results[bsp_path] = list(expanded_resources)
     
+    # --- Force-included assets from extra_model_globs ---
+    # Resources the QC builds dynamically (e.g. func_breakable gibs) can't be
+    # discovered by static scanning. Resolve the configured globs against disk
+    # and inject the matches as a synthetic source so they are (a) bundled and
+    # (b) picked up by the model dependency scan below (textures/skins).
+    if extra_model_globs:
+        forced = set()
+        for pattern in extra_model_globs:
+            search = os.path.join(data_dir, pattern.replace("\\", "/"))
+            for match in _glob.glob(search, recursive=True):
+                if os.path.isfile(match):
+                    rel = os.path.relpath(match, data_dir).replace("\\", "/")
+                    forced.add(rel)
+        if forced:
+            all_results["<extra_model_globs>"] = sorted(forced)
+            print(f"Force-included {len(forced)} file(s) from extra_model_globs")
+
     # --- Recursive Model Scanning ---
     model_extensions = {".md3", ".iqm", ".obj", ".mdl"}
     print("Scanning discovered model files...")

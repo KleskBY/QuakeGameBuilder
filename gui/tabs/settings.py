@@ -128,11 +128,7 @@ class SettingsTab(QWidget):
 
         tab_ignore = QWidget()
         layout_ign = QVBoxLayout(tab_ignore)
-        layout_ign.addWidget(QLabel(
-            "External / stock assets to exclude from the MISSING check.\n"
-            "One glob pattern per line (e.g. sound/vox/*, maps/c2a2*.bsp).\n"
-            "These are original Q1/HL1 assets the mod doesn't bundle; the end "
-            "user supplies them."))
+        layout_ign.addWidget(QLabel("Assets to exclude from the MISSING check."))
         layout_ign.addWidget(self.edit_ignore_patterns)
         self.tabs.addTab(tab_ignore, "Ignore")
 
@@ -256,7 +252,11 @@ class SettingsTab(QWidget):
         self.config_manager.set_all(self._collect_config())
 
     def _collect_config(self):
-        return {
+        # Start from the existing config so keys without a UI field
+        # (extra_model_globs, forbidden_globs, build_mode, manifest, ...) are
+        # preserved across a Save Settings instead of being silently dropped.
+        merged = dict(self.config_manager.get_all())
+        merged.update({
             "fs_basepath": self.edit_fs_basepath.text(),
             "fs_game": self.edit_fs_game.text(),
             "qc_dir": self.edit_qc_dir.text(),
@@ -267,7 +267,8 @@ class SettingsTab(QWidget):
             "remove_paths": self.get_list_from_editor(self.edit_rem_paths),
             "ignore_patterns": self.get_list_from_editor(self.edit_ignore_patterns),
             "pk3_packs": self._get_pk3_packs()
-        }
+        })
+        return merged
 
     def save_settings(self):
         new_config = self._collect_config()

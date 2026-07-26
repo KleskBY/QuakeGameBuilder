@@ -32,6 +32,7 @@ def _scan(config):
         qc_dir=str(qc_root),
         bsp_dir=str(data_root / "maps"),
         scripts_dir=str(data_root / "scripts"),
+        extra_model_globs=config.get("extra_model_globs", []),
     )
     print(json.dumps(results, indent=2, sort_keys=True))
     return results

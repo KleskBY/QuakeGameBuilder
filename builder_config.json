@@ -1,10 +1,11 @@
 {
+    "schema_version": 1,
     "fs_basepath": "C:\\Users\\user\\Documents\\GitHub\\Libre-life",
     "fs_game": "data",
     "qc_dir": "src",
     "output_path": "",
+    "build_mode": "scan",
     "build_naming": "date",
-    "open_after_build": true,
     "includes": [
         "cubemaps",
         "gfx",
@@ -41,7 +42,8 @@
         "textures/transparent.png",
         "textures/liquids_extracted",
         "data",
-        "video"
+        "video",
+        "data/user.cfg"
     ],
     "remove_paths": [
         "data/gfx/ui",
@@ -50,6 +52,7 @@
         "data/particles/particlefont-template.png",
         "zircon_history.txt"
     ],
+    "pk3_packs": [],
     "ignore_patterns": [
         "common/nodraw*",
         "sound/[1-5].wav",
@@ -60,5 +63,12 @@
         "models/hgibs.mdl",
         "progs/spawn.mdl"
     ],
-    "pk3_packs": []
+    "extra_model_globs": [
+        "models/*gibs*.iqm",
+        "models/*gibs*.iqm.framegroups"
+    ],
+    "forbidden_globs": [],
+    "archive": false,
+    "open_after_build": true,
+    "_config_path": "C:\\Users\\user\\Documents\\GitHub\\Libre-life\\tools\\QuakeGameBuilder\\builder_config.json"
 }

@@ -7,11 +7,12 @@ class ScanWorker(QThread):
     finished = pyqtSignal(dict)
     error = pyqtSignal(str)
 
-    def __init__(self, fs_basepath, fs_game, qc_dir):
+    def __init__(self, fs_basepath, fs_game, qc_dir, extra_model_globs=None):
         super().__init__()
         self.fs_basepath = fs_basepath
         self.fs_game = fs_game
         self.qc_dir = qc_dir
+        self.extra_model_globs = extra_model_globs or []
 
     def run(self):
         data_path = os.path.join(self.fs_basepath, self.fs_game)
@@ -31,7 +32,8 @@ class ScanWorker(QThread):
             self.finished.emit({})
             return
 
-        results = scanner.scan_all(qc_dir=qc_path, bsp_dir=bsp_path)
+        results = scanner.scan_all(qc_dir=qc_path, bsp_dir=bsp_path,
+                                   extra_model_globs=self.extra_model_globs)
         self.finished.emit(results)
 
 class BuildWorker(QThread):

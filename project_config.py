@@ -39,6 +39,7 @@ DEFAULT_CONFIG = {
     ],
     "pk3_packs": [],
     "ignore_patterns": [],
+    "extra_model_globs": [],
     "forbidden_globs": [],
     "archive": False,
     "open_after_build": True,
