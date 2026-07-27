@@ -25,7 +25,7 @@
         "progs.dat",
         "effectinfo.txt",
         "../fteqw64.exe",
-        "../lf.exe",
+        "../librelife.exe",
         "../default.fmf",
         "../bin64",
         "../src",
@@ -43,7 +43,9 @@
         "textures/liquids_extracted",
         "data",
         "video",
-        "user.cfg"
+        "user.cfg",
+        "librelife-sdl",
+        "librelife-dedicated"
     ],
     "remove_paths": [
         "data/gfx/ui",
