@@ -33,6 +33,58 @@ pip install PyQt6
 python run_gui.py
 ```
 
+The scanner and builder core use only the Python standard library. PyQt6 is
+required only for the GUI.
+
+## Command line
+
+Every command accepts a project configuration explicitly, so paths are
+resolved relative to that configuration rather than the current directory:
+
+```bash
+python quakebuild.py scan --config path/to/project.json
+python quakebuild.py build --config path/to/project.json --version 1.0.0
+python quakebuild.py verify --config path/to/project.json --version 1.0.0
+```
+
+Legacy scan builds remain available for private development. They print a
+warning because dependency scanning cannot establish whether copied assets
+are licensed for redistribution.
+
+### Strict release manifests
+
+Public releases should use `build_mode: "manifest"`. This mode copies only
+individual files listed in an exact manifest, rejects directory entries and
+path traversal, builds in temporary staging, verifies forbidden patterns, and
+writes a deterministic ZIP with SHA-256 metadata.
+
+```json
+{
+  "schema_version": 1,
+  "fs_basepath": "../..",
+  "fs_game": "data",
+  "qc_dir": "src",
+  "output_path": "../../dist",
+  "build_mode": "manifest",
+  "manifest": "release-manifest.json",
+  "artifact_name": "MyGame-{version}-core",
+  "forbidden_globs": ["*.sav", "**/*.sav", "reference/**"],
+  "archive": "zip",
+  "open_after_build": false
+}
+```
+
+The manifest itself is intentionally small and auditable:
+
+```json
+{
+  "schema_version": 1,
+  "files": [
+    {"source": "data/progs.dat", "destination": "data/progs.dat"}
+  ]
+}
+```
+
 ## Configuration
 
 All settings are stored in `builder_config.json`:

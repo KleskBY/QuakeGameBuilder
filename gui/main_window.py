@@ -118,7 +118,8 @@ class MainWindow(QMainWindow):
         self.scan_action.setEnabled(False)
         self.status.setText("Scanning resources...")
         config = self.config_manager.get_all()
-        self.worker = ScanWorker(config["fs_basepath"], config["fs_game"], config.get("qc_dir", "qc"))
+        self.worker = ScanWorker(config["fs_basepath"], config["fs_game"], config.get("qc_dir", "qc"),
+                                 extra_model_globs=config.get("extra_model_globs", []))
         self.worker.error.connect(self.on_scan_error)
         self.worker.finished.connect(self.on_scan_finished)
         self.worker.start()

@@ -180,9 +180,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-#Hidden directories
-.*
-/.*/
+# Local editor/assistant state
+.claude/
+.idea/
+.vscode/
 
 # QuakeGameBuilder
 build*/
